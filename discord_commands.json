@@ -1,0 +1,15 @@
+[
+  {
+    "name": "review-followup",
+    "type": 1,
+    "description": "Review an immutable follow-up issue draft",
+    "options": [
+      {
+        "name": "draft_id",
+        "description": "Draft ID to preview before approval",
+        "type": 3,
+        "required": true
+      }
+    ]
+  }
+]
