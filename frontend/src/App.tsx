@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCheck, CircleHelp,
   ClipboardCheck, ExternalLink, FileWarning, GitBranch, GitPullRequest, LoaderCircle,
@@ -9,7 +9,7 @@ import {
   ReactFlowProvider, type Edge, type Node, type NodeProps, useReactFlow,
 } from '@xyflow/react';
 import { buildEvidenceSteps, decisionLabel, makeExampleInvestigation, type EvidenceStep } from './evidence';
-import type { Investigation, ViewMode } from './types';
+import type { Investigation, SwitchEvent, SwitchEventFeed, ViewMode } from './types';
 
 type GraphNodeData = { step: EvidenceStep; order: number };
 type GraphNode = Node<GraphNodeData, 'evidence'>;
@@ -130,18 +130,20 @@ function DetailPanel({ step, onClose }: { step: EvidenceStep; onClose: () => voi
   );
 }
 
-function WorkflowStrip({ mode }: { mode: ViewMode }) {
+function WorkflowStrip({ mode, events, connected }: { mode: ViewMode; events: SwitchEvent[]; connected: boolean }) {
   const example = mode === 'example';
+  const evidenceEvent = events.find((event) => event.agent_id === 'commitmentproof-evidence-agent');
+  const coordinatorEvent = events.find((event) => event.agent_id === 'commitmentproof-coordinator');
   const items = [
     { label: 'Human Request', purpose: 'Names the customer promise and the pull request to check.', output: example ? 'Request recorded in this room' : 'Investigation submitted from this dashboard', icon: MessageSquareText, state: 'done', badge: example ? 'RECORDED' : 'LOCAL REQUEST' },
-    { label: 'Evidence Agent', purpose: 'Collects source-linked PR and CI evidence; calls out proof still missing.', output: example ? 'Merged PR + passing CI; deployment and QA unknown' : 'No live agent event; read-only GitHub collector returned evidence', icon: GitBranch, state: example ? 'done' : 'waiting', badge: example ? 'HANDED OFF' : 'NOT CONNECTED' },
-    { label: 'Coordinator Agent', purpose: 'Applies the completion policy and turns evidence gaps into a next step.', output: example ? 'Requested deployment proof and QA confirmation' : 'No live Switch event for this investigation', icon: Activity, state: example ? 'done' : 'waiting', badge: example ? 'ASSESSED' : 'NOT CONNECTED' },
-    { label: 'Human Approval', purpose: 'A person reviews the exact follow-up before any external write.', output: example ? 'No approval was received' : 'No approval requested', icon: ShieldCheck, state: 'waiting', badge: 'PENDING' },
-    { label: 'GitHub Action', purpose: 'Creates an issue only after verified human approval.', output: 'No issue created', icon: ArrowUpRight, state: 'locked', badge: 'NOT EXECUTED' },
+    { label: 'Evidence Agent', purpose: 'Collects source-linked PR and CI evidence; calls out proof still missing.', output: example ? 'Merged PR + passing CI; deployment and QA unknown' : evidenceEvent?.summary || 'No signed agent event; read-only GitHub collector returned evidence', icon: GitBranch, state: example ? 'done' : evidenceEvent ? 'done' : 'waiting', badge: example ? 'RECORDED HANDOFF' : evidenceEvent ? 'SIGNED EVENT' : 'DISCONNECTED' },
+    { label: 'Coordinator Agent', purpose: 'Applies the completion policy and turns evidence gaps into a next step.', output: example ? 'Requested deployment proof and QA confirmation' : coordinatorEvent?.summary || 'No signed coordinator event for this investigation', icon: Activity, state: example ? 'done' : coordinatorEvent ? 'done' : 'waiting', badge: example ? 'RECORDED ASSESSMENT' : coordinatorEvent ? 'SIGNED EVENT' : 'DISCONNECTED' },
+    { label: 'Human Approval', purpose: 'A person reviews the exact follow-up before any external write.', output: example ? 'Owner approved the exact follow-up in Switch' : 'No approval requested', icon: ShieldCheck, state: example ? 'done' : 'waiting', badge: example ? 'HUMAN APPROVED' : 'PENDING' },
+    { label: 'GitHub Action', purpose: example ? 'Human created the issue manually after approval; no automated write ran.' : 'Creates an issue only after verified human approval.', output: example ? 'Issue #2 created manually' : 'No issue created', icon: ArrowUpRight, state: example ? 'done' : 'locked', badge: example ? 'MANUAL ACTION' : 'NOT EXECUTED' },
   ];
   return (
     <section className="workflow-section" aria-labelledby="workflow-title">
-      <div className="switch-workflow-heading"><div><div className="section-kicker">THE COLLABORATION PATH</div><h2 id="workflow-title">Powered by Switch: Humans + AI Agents Working Together.</h2><p>Evidence moves from a person, through two distinct agent roles, and returns to a human before GitHub can change.</p></div><div className={`workflow-status ${example ? 'is-recorded' : 'is-unconnected'}`}>{example ? 'RECORDED ROOM HANDOFF' : 'LIVE SWITCH EVENTS NOT CONNECTED'}<span>{example ? 'Actual handoff - not a live event feed' : 'This investigation uses the GitHub collector only'}</span></div></div>
+      <div className="switch-workflow-heading"><div><div className="section-kicker">THE COLLABORATION PATH</div><h2 id="workflow-title">Powered by Switch: Humans + AI Agents Working Together.</h2><p>Evidence moves from a person, through two distinct agent roles, and returns to a human before GitHub can change.</p></div><div className={`workflow-status ${example || connected ? 'is-recorded' : 'is-unconnected'}`}>{example ? 'RECORDED ROOM HANDOFF' : connected ? 'LIVE AGENT EVENTS CONNECTED' : 'LIVE AGENT EVENTS DISCONNECTED'}<span>{example ? 'Actual handoff - not a live event feed' : connected ? 'Fresh signed events from both configured agents' : 'Waiting for fresh signed agent publications'}</span></div></div>
       <div className="workflow-track" aria-label="Human request to GitHub action workflow">
         {items.map((item, index) => {
           const Icon = item.icon;
@@ -156,7 +158,21 @@ function WorkflowStrip({ mode }: { mode: ViewMode }) {
         })}
       </div>
       <div className="agent-rationale"><div className="handoff-beam"><ArrowRight size={19} /></div><p><strong>Why two agents?</strong> The Evidence Agent gathers and cites the proof. The Coordinator independently applies the policy and identifies what is missing. That handoff keeps raw evidence separate from the decision about whether a customer promise is safe to close.</p></div>
-      {example ? <div className="room-note"><div><span>VERIFIED SWITCH-CONNECTED DISCORD ROOM</span><strong>#commitment-proof</strong><small>Channel ID - 1568584704301473985</small></div><a href="https://discord.com/channels" target="_blank" rel="noreferrer">Open Discord <ExternalLink size={14} /></a><p>Recorded handoff: Evidence Agent message <code>sw_f3edfcaadde246219504809024217a72</code> → Coordinator follow-up draft <code>sw_62aebc7a04614e88bcd9d06065b6ec04</code>. This verified room history is not a live event feed.</p></div> : <div className="room-note room-note-unconnected"><span>SWITCH ROOM NOT CONNECTED TO THIS INVESTIGATION</span><p>This verdict came from the read-only GitHub collector. It does not represent a new agent handoff or approval.</p></div>}
+      {example && <section className="human-completion" aria-labelledby="human-completion-title">
+        <div className="human-completion-heading"><div><span>VERIFIED HUMAN-IN-THE-LOOP OUTCOME</span><h3 id="human-completion-title">HUMAN APPROVED · GITHUB ISSUE CREATED</h3></div><span className="manual-action-badge">MANUALLY EXECUTED AFTER APPROVAL</span></div>
+        <ol className="completion-sequence">
+          <li><b>Evidence Agent investigated</b><span>PR merged; CI passed. Deployment and QA remain unverified.</span><a href="https://github.com/microsoft/vscode/pull/331010" target="_blank" rel="noreferrer">Open PR evidence <ExternalLink size={12} /></a></li>
+          <li><b>Coordinator drafted follow-up</b><span>Requested deployment proof and QA reproduction.</span><small>Switch draft sw_62aebc7a04614e88bcd9d06065b6ec04</small></li>
+          <li><b>Human approved exact draft</b><span>Approval recorded in the Switch conversation.</span><small>Switch approval sw_353065a05331d2295d29b05961ea6c17</small></li>
+          <li><b>Human manually created issue</b><span>No automated GitHub write was performed.</span><a href="https://github.com/bh00mi-11/CommitmentProof/issues/2" target="_blank" rel="noreferrer">Open issue #2 <ExternalLink size={12} /></a></li>
+          <li><b>Coordinator verified the issue</b><span>Title, open status, body and evidence links match the approved draft.</span><a href="https://github.com/bh00mi-11/CommitmentProof/issues/2" target="_blank" rel="noreferrer">Verified issue #2 · OPEN <ExternalLink size={12} /></a></li>
+        </ol>
+        <div className="verified-issue-title"><span>GITHUB ISSUE #2</span><strong>Verify deployment and QA for merged VS Code fix #331010</strong><a href="https://github.com/bh00mi-11/CommitmentProof/issues/2" target="_blank" rel="noreferrer">View the manually created issue <ExternalLink size={13} /></a>
+          <div className="issue-evidence-links"><a href="https://github.com/microsoft/vscode/pull/331010" target="_blank" rel="noreferrer">Merged PR #331010 <ExternalLink size={12} /></a><a href="https://github.com/microsoft/vscode/commit/026fe5316ffc0998aab553b3ca3d4f36d8e8792f/checks" target="_blank" rel="noreferrer">27/27 successful checks <ExternalLink size={12} /></a></div>
+        </div>
+        <p className="manual-action-note">This issue was created manually by the human owner after approving the exact proposal. The automated approval backend is not deployed.</p>
+      </section>}
+      {example ? <div className="room-note"><div><span>VERIFIED SWITCH-CONNECTED DISCORD ROOM</span><strong>#commitment-proof</strong><small>Channel ID - 1568584704301473985</small></div><a href="https://discord.com/channels" target="_blank" rel="noreferrer">Open Discord <ExternalLink size={14} /></a><p>Recorded handoff: Evidence Agent message <code>sw_f3edfcaadde246219504809024217a72</code> → Coordinator follow-up draft <code>sw_62aebc7a04614e88bcd9d06065b6ec04</code>. This verified room history is not a live event feed.</p></div> : <div className="room-note room-note-unconnected"><span>{connected ? 'SIGNED AGENT EVENT FEED' : 'SWITCH AGENT EVENT FEED DISCONNECTED'}</span><p>Per-agent Ed25519 signatures authenticate these publications, not Switch or Discord. Events expire from this view after 15 minutes; approvals and GitHub writes remain disabled.</p>{events.map((event) => <article className="agent-event" key={event.event_id}><strong>{event.agent_id}</strong><span>{event.execution_status} · {new Date(event.received_at).toLocaleString()}</span><p>{event.summary}</p>{event.evidence_links.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">Open evidence <ExternalLink size={12} /></a>)}</article>)}</div>}
     </section>
   );
 }
@@ -170,12 +186,39 @@ export default function App() {
   const [pullRequest, setPullRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [switchFeed, setSwitchFeed] = useState<SwitchEventFeed>({ status: 'DISCONNECTED', authenticated: false, events: [] });
   const steps = useMemo(() => buildEvidenceSteps(investigation.evidence, investigation.assessment), [investigation]);
   const decision = decisionLabel(investigation.assessment);
   const verifiedCount = steps.filter((step) => step.state === 'verified').length;
   const sourceCount = steps.filter((step) => step.sourceUrl).length;
   const unresolvedCount = steps.filter((step) => step.id !== 'decision' && step.state === 'missing').length;
   const checklist = steps.filter((step) => ['pr', 'checks', 'deploy', 'qa'].includes(step.id));
+
+  useEffect(() => {
+    const hasLiveInvestigationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(investigation.investigation_id);
+    if (mode !== 'live' || !hasLiveInvestigationId) {
+      setSwitchFeed({ status: 'DISCONNECTED', authenticated: false, events: [] });
+      return;
+    }
+    let active = true;
+    const refresh = async () => {
+      try {
+        const response = await fetch(`/api/switch/events?investigation_id=${encodeURIComponent(investigation.investigation_id)}`);
+        const value: unknown = await response.json();
+        if (!active || !response.ok || !value || typeof value !== 'object' || !('events' in value) || !Array.isArray(value.events)) {
+          if (active) setSwitchFeed({ status: 'DISCONNECTED', authenticated: false, events: [] });
+          return;
+        }
+        const feed = value as SwitchEventFeed;
+        setSwitchFeed({ status: feed.status === 'CONNECTED' && feed.authenticated ? 'CONNECTED' : 'DISCONNECTED', authenticated: feed.authenticated === true, events: feed.events });
+      } catch {
+        if (active) setSwitchFeed({ status: 'DISCONNECTED', authenticated: false, events: [] });
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [investigation.investigation_id, mode]);
 
   const runInvestigation = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -189,7 +232,7 @@ export default function App() {
     try {
       const response = await fetch('/api/investigate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repository: repository.trim(), pull_request_number: parsedNumber }),
+        body: JSON.stringify({ repository: repository.trim(), pull_request_number: parsedNumber, investigation_id: crypto.randomUUID() }),
       });
       const rawResponse = await response.text();
       let payload: unknown;
@@ -281,9 +324,9 @@ export default function App() {
 
       {investigation.evidence.collection_errors && investigation.evidence.collection_errors.length > 0 && <div className="collector-notes" role="status"><FileWarning size={15} /><div><strong>Collector notes</strong>{investigation.evidence.collection_errors.map((note) => <span key={note}>{note}</span>)}</div></div>}
 
-      <WorkflowStrip mode={mode} />
+      <WorkflowStrip mode={mode} events={switchFeed.events} connected={switchFeed.status === 'CONNECTED'} />
 
-      <section className="next-step"><div className="next-step-icon"><CircleHelp size={19} /></div><div><span>NEXT ACTION</span><strong>{investigation.assessment.permitted_action === 'REQUEST_EVIDENCE' ? 'Request deployment proof and QA confirmation.' : investigation.assessment.permitted_action === 'PREPARE_FOLLOWUP_DRAFT' ? 'Prepare a follow-up and keep the customer promise open.' : 'Ask a human to review the complete source-linked evidence.'}</strong><p>Unknown evidence stays unknown. This screen never creates an issue or sends a customer message.</p></div><div className="next-step-lock"><ShieldAlert size={15} /> Human decision required</div></section>
+      <section className="next-step"><div className="next-step-icon"><CircleHelp size={19} /></div><div><span>NEXT ACTION</span><strong>{investigation.assessment.permitted_action === 'REQUEST_EVIDENCE' ? 'Request deployment proof and QA confirmation.' : investigation.assessment.permitted_action === 'PREPARE_FOLLOWUP_DRAFT' ? 'Prepare a follow-up and keep the customer promise open.' : 'Ask a human to review the complete source-linked evidence.'}</strong><p>Unknown evidence stays unknown. Issue #2 was manually created after approval; this screen does not create issues or send customer messages.</p></div><div className="next-step-lock"><ShieldAlert size={15} /> Human decision required</div></section>
 
       <section className="map-disclosure" aria-labelledby="graph-title">
         <button className="map-toggle" onClick={() => setShowGraph((visible) => !visible)} aria-expanded={showGraph} aria-controls="evidence-map"><span><GitBranch size={16} />Explore the evidence relationship map</span><span>{showGraph ? 'Hide map' : 'Optional detail'} <ArrowDownRight size={15} /></span></button>

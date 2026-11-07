@@ -81,6 +81,7 @@ export function makeExampleInvestigation(): Investigation {
     permitted_action: 'REQUEST_EVIDENCE',
   };
   return {
+    investigation_id: 'recorded-microsoft-vscode-pr-331010',
     repository: 'microsoft/vscode',
     pull_request_number: 331010,
     collected_at: 'Recorded read-only collection · not refreshed in this session',

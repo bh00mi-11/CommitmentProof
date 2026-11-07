@@ -30,7 +30,14 @@ describe('investigation walkthrough', () => {
     expect(screen.getByRole('heading', { name: /Powered by Switch: Humans \+ AI Agents Working Together/i })).toBeInTheDocument();
     expect(screen.getByText(/Why two agents\?/i)).toBeInTheDocument();
     expect(screen.getByText(/Requested deployment proof and QA confirmation/)).toBeInTheDocument();
-    expect(screen.getByText(/No issue created/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'HUMAN APPROVED · GITHUB ISSUE CREATED' })).toBeInTheDocument();
+    expect(screen.getByText(/MANUALLY EXECUTED AFTER APPROVAL/)).toBeInTheDocument();
+    expect(screen.getByText(/automated approval backend is not deployed/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /View the manually created issue/ })).toHaveAttribute('href', 'https://github.com/bh00mi-11/CommitmentProof/issues/2');
+    expect(screen.getByText('Verify deployment and QA for merged VS Code fix #331010')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Merged PR #331010/ })).toHaveAttribute('href', 'https://github.com/microsoft/vscode/pull/331010');
+    expect(screen.getByRole('link', { name: /27\/27 successful checks/ })).toHaveAttribute('href', 'https://github.com/microsoft/vscode/commit/026fe5316ffc0998aab553b3ca3d4f36d8e8792f/checks');
+    expect(screen.getByText(/deployment and QA remain unverified/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open Discord/ })).toHaveAttribute('href', 'https://discord.com/channels');
     expect(screen.getAllByText(/not a live event feed/i)).toHaveLength(3);
     expect(screen.getByText(/sw_f3edfcaadde246219504809024217a72/)).toBeInTheDocument();
@@ -39,7 +46,7 @@ describe('investigation walkthrough', () => {
 
   it('submits live investigations to the local adapter and renders policy output', async () => {
     const payload = {
-      repository: 'acme/app', pull_request_number: 7, collected_at: '2026-11-07T00:00:00Z',
+      investigation_id: '68ff6a47-ff85-49f3-a997-5f4d68bcb043', repository: 'acme/app', pull_request_number: 7, collected_at: '2026-11-07T00:00:00Z',
       evidence: {
         pr_merged: { value: true, source_url: 'https://github.com/acme/app/pull/7' },
         tests_passed: { value: false, source_url: 'https://github.com/acme/app/commit/abc/checks' },
@@ -47,7 +54,7 @@ describe('investigation walkthrough', () => {
       },
       assessment: { decision: 'BLOCKED', reasons: ['Negative evidence: required tests passed'], can_claim_complete: false, permitted_action: 'PREPARE_FOLLOWUP_DRAFT' },
     };
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => new Response(JSON.stringify(String(input) === '/api/investigate' ? payload : { status: 'DISCONNECTED', authenticated: false, events: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     render(<App />);
     fireEvent.click(screen.getByRole('tab', { name: /Live investigation/i }));
     fireEvent.change(screen.getByPlaceholderText('owner/repository'), { target: { value: 'acme/app' } });
@@ -56,8 +63,8 @@ describe('investigation walkthrough', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'BLOCKED' })).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith('/api/investigate', expect.objectContaining({ method: 'POST' }));
     expect(screen.getByText(/Read-only GitHub evidence/)).toBeInTheDocument();
-    expect(screen.getByText(/LIVE SWITCH EVENTS NOT CONNECTED/)).toBeInTheDocument();
-    expect(screen.getByText(/does not represent a new agent handoff or approval/i)).toBeInTheDocument();
+    expect(screen.getByText(/LIVE AGENT EVENTS DISCONNECTED/)).toBeInTheDocument();
+    expect(screen.getByText(/approvals and GitHub writes remain disabled/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /Open source evidence/ }).map((link) => link.getAttribute('href'))).toContain('https://github.com/acme/app/pull/7');
   });
 
