@@ -133,25 +133,30 @@ function DetailPanel({ step, onClose }: { step: EvidenceStep; onClose: () => voi
 function WorkflowStrip({ mode }: { mode: ViewMode }) {
   const example = mode === 'example';
   const items = [
-    { label: 'Human', detail: example ? 'review request recorded' : 'submitted repo + PR', icon: MessageSquareText, state: 'done', badge: example ? 'RECORDED' : 'STARTED' },
-    { label: example ? 'Evidence Agent' : 'GitHub collector', detail: example ? 'PR + CI proved; deploy/QA unknown' : 'read-only evidence fetched', icon: GitBranch, state: 'done', badge: 'DONE' },
-    { label: 'Coordinator', detail: example ? 'requested missing deployment + QA proof' : 'live Switch handoff unavailable', icon: Activity, state: example ? 'done' : 'waiting', badge: example ? 'RECORDED' : 'NOT CONNECTED' },
-    { label: 'Human approval', detail: example ? 'no approval received' : 'not requested here', icon: ShieldCheck, state: 'waiting', badge: 'PENDING' },
-    { label: 'GitHub action', detail: 'no issue created', icon: ArrowUpRight, state: 'locked', badge: 'NOT EXECUTED' },
+    { label: 'Human Request', purpose: 'Names the customer promise and the pull request to check.', output: example ? 'Request recorded in this room' : 'Investigation submitted from this dashboard', icon: MessageSquareText, state: 'done', badge: example ? 'RECORDED' : 'LOCAL REQUEST' },
+    { label: 'Evidence Agent', purpose: 'Collects source-linked PR and CI evidence; calls out proof still missing.', output: example ? 'Merged PR + passing CI; deployment and QA unknown' : 'No live agent event; read-only GitHub collector returned evidence', icon: GitBranch, state: example ? 'done' : 'waiting', badge: example ? 'HANDED OFF' : 'NOT CONNECTED' },
+    { label: 'Coordinator Agent', purpose: 'Applies the completion policy and turns evidence gaps into a next step.', output: example ? 'Requested deployment proof and QA confirmation' : 'No live Switch event for this investigation', icon: Activity, state: example ? 'done' : 'waiting', badge: example ? 'ASSESSED' : 'NOT CONNECTED' },
+    { label: 'Human Approval', purpose: 'A person reviews the exact follow-up before any external write.', output: example ? 'No approval was received' : 'No approval requested', icon: ShieldCheck, state: 'waiting', badge: 'PENDING' },
+    { label: 'GitHub Action', purpose: 'Creates an issue only after verified human approval.', output: 'No issue created', icon: ArrowUpRight, state: 'locked', badge: 'NOT EXECUTED' },
   ];
   return (
     <section className="workflow-section" aria-labelledby="workflow-title">
-      <div className="section-heading"><div><div className="section-kicker">WHY SWITCH MATTERS</div><h2 id="workflow-title">Evidence moves through people, not autopilot.</h2></div><div className="workflow-status">{example ? 'Recorded Switch handoff · no live event connection' : 'Live Switch events are not connected'}</div></div>
-      <div className="workflow-track">
+      <div className="switch-workflow-heading"><div><div className="section-kicker">THE COLLABORATION PATH</div><h2 id="workflow-title">Powered by Switch: Humans + AI Agents Working Together.</h2><p>Evidence moves from a person, through two distinct agent roles, and returns to a human before GitHub can change.</p></div><div className={`workflow-status ${example ? 'is-recorded' : 'is-unconnected'}`}>{example ? 'RECORDED ROOM HANDOFF' : 'LIVE SWITCH EVENTS NOT CONNECTED'}<span>{example ? 'Actual handoff - not a live event feed' : 'This investigation uses the GitHub collector only'}</span></div></div>
+      <div className="workflow-track" aria-label="Human request to GitHub action workflow">
         {items.map((item, index) => {
           const Icon = item.icon;
           return <div className="workflow-item-wrap" key={item.label}>
-            <div className={`workflow-item ${item.state}`}><div className="workflow-icon"><Icon size={17} /></div><div><strong>{item.label}</strong><span>{item.detail}</span><small>{item.badge}</small></div></div>
+            <article className={`workflow-item ${item.state}`}>
+              <div className="workflow-step-top"><div className="workflow-icon"><Icon size={21} /></div><small>{item.badge}</small></div>
+              <strong>{item.label}</strong><span className="workflow-purpose">{item.purpose}</span>
+              <div className="workflow-output"><b>OUTPUT</b><span>{item.output}</span></div>
+            </article>
             {index < items.length - 1 && <ArrowRight className="workflow-arrow" size={17} aria-hidden="true" />}
           </div>;
         })}
       </div>
-      {example && <p className="room-note"><span>RECORDED SWITCH ROOM</span> c96aba84-1c69-4a1a-9399-510b329076cb <span className="note-divider">·</span> The Evidence Agent handed off merged-PR and CI results; the Coordinator requested deployment and QA proof. No approval or GitHub action followed.</p>}
+      <div className="agent-rationale"><div className="handoff-beam"><ArrowRight size={19} /></div><p><strong>Why two agents?</strong> The Evidence Agent gathers and cites the proof. The Coordinator independently applies the policy and identifies what is missing. That handoff keeps raw evidence separate from the decision about whether a customer promise is safe to close.</p></div>
+      {example ? <div className="room-note"><div><span>REAL SWITCH-CONNECTED DISCORD ROOM</span><strong>#commitment-proof</strong><small>Channel ID - 1568584704301473985</small></div><a href="https://discord.com/channels" target="_blank" rel="noreferrer">Open Discord <ExternalLink size={14} /></a><p>Find #commitment-proof in the CommitmentProof Discord server. The recorded handoff above is from this room; it is not a live event feed.</p></div> : <div className="room-note room-note-unconnected"><span>SWITCH ROOM NOT CONNECTED TO THIS INVESTIGATION</span><p>This verdict came from the read-only GitHub collector. It does not represent a new agent handoff or approval.</p></div>}
     </section>
   );
 }

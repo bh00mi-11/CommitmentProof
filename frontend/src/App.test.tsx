@@ -26,7 +26,12 @@ describe('investigation walkthrough', () => {
     expect(screen.getByRole('heading', { name: /Can we tell the customer their fix is delivered/i })).toBeInTheDocument();
     expect(screen.getByText(/Recorded evidence · collected previously · not refreshed/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'NEEDS EVIDENCE' })).toBeInTheDocument();
-    expect(screen.getByText(/No approval or GitHub action followed/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Powered by Switch: Humans \+ AI Agents Working Together/i })).toBeInTheDocument();
+    expect(screen.getByText(/Why two agents\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Requested deployment proof and QA confirmation/)).toBeInTheDocument();
+    expect(screen.getByText(/No issue created/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open Discord/ })).toHaveAttribute('href', 'https://discord.com/channels');
+    expect(screen.getAllByText(/not a live event feed/i)).toHaveLength(2);
     expect(screen.getByRole('button', { name: /Explore the evidence relationship map/i })).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -49,5 +54,8 @@ describe('investigation walkthrough', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'BLOCKED' })).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith('/api/investigate', expect.objectContaining({ method: 'POST' }));
     expect(screen.getByText(/Read-only GitHub evidence/)).toBeInTheDocument();
+    expect(screen.getByText(/LIVE SWITCH EVENTS NOT CONNECTED/)).toBeInTheDocument();
+    expect(screen.getByText(/does not represent a new agent handoff or approval/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Open source evidence/ }).map((link) => link.getAttribute('href'))).toContain('https://github.com/acme/app/pull/7');
   });
 });
