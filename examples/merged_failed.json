@@ -1,0 +1,17 @@
+{
+  "pr_merged": {
+    "value": true,
+    "source_url": "https://github.com/example/repo/pull/84"
+  },
+  "tests_passed": {
+    "value": false,
+    "source_url": "https://github.com/example/repo/actions/runs/123"
+  },
+  "deployment_verified": {
+    "value": null
+  },
+  "qa_confirmed": {
+    "value": false,
+    "source_url": "https://github.com/example/repo/issues/2"
+  }
+}
