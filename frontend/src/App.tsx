@@ -133,25 +133,25 @@ function DetailPanel({ step, onClose }: { step: EvidenceStep; onClose: () => voi
 function WorkflowStrip({ mode }: { mode: ViewMode }) {
   const example = mode === 'example';
   const items = [
-    { label: 'Customer', detail: 'reports a fix', icon: MessageSquareText, state: 'done' },
-    { label: example ? 'Evidence Agent' : 'GitHub collector', detail: example ? 'PR + checks verified' : 'read-only investigation', icon: GitBranch, state: 'done' },
-    { label: 'Coordinator', detail: example ? 'requested deploy + QA proof' : 'Switch handoff unavailable', icon: Activity, state: example ? 'done' : 'waiting' },
-    { label: 'Human review', detail: 'approval is pending', icon: ShieldCheck, state: 'waiting' },
-    { label: 'GitHub action', detail: 'not executed', icon: ArrowUpRight, state: 'locked' },
+    { label: 'Human', detail: example ? 'review request recorded' : 'submitted repo + PR', icon: MessageSquareText, state: 'done', badge: example ? 'RECORDED' : 'STARTED' },
+    { label: example ? 'Evidence Agent' : 'GitHub collector', detail: example ? 'PR + CI proved; deploy/QA unknown' : 'read-only evidence fetched', icon: GitBranch, state: 'done', badge: 'DONE' },
+    { label: 'Coordinator', detail: example ? 'requested missing deployment + QA proof' : 'live Switch handoff unavailable', icon: Activity, state: example ? 'done' : 'waiting', badge: example ? 'RECORDED' : 'NOT CONNECTED' },
+    { label: 'Human approval', detail: example ? 'no approval received' : 'not requested here', icon: ShieldCheck, state: 'waiting', badge: 'PENDING' },
+    { label: 'GitHub action', detail: 'no issue created', icon: ArrowUpRight, state: 'locked', badge: 'NOT EXECUTED' },
   ];
   return (
     <section className="workflow-section" aria-labelledby="workflow-title">
-      <div className="section-heading"><div><div className="section-kicker">THE CONTROL PATH</div><h2 id="workflow-title">A human stays in the loop.</h2></div><div className="workflow-status">{example ? 'Recorded Switch handoff · not live-connected' : 'Switch events are not connected to this frontend'}</div></div>
+      <div className="section-heading"><div><div className="section-kicker">WHY SWITCH MATTERS</div><h2 id="workflow-title">Evidence moves through people, not autopilot.</h2></div><div className="workflow-status">{example ? 'Recorded Switch handoff · no live event connection' : 'Live Switch events are not connected'}</div></div>
       <div className="workflow-track">
         {items.map((item, index) => {
           const Icon = item.icon;
           return <div className="workflow-item-wrap" key={item.label}>
-            <div className={`workflow-item ${item.state}`}><div className="workflow-icon"><Icon size={17} /></div><div><strong>{item.label}</strong><span>{item.detail}</span></div></div>
+            <div className={`workflow-item ${item.state}`}><div className="workflow-icon"><Icon size={17} /></div><div><strong>{item.label}</strong><span>{item.detail}</span><small>{item.badge}</small></div></div>
             {index < items.length - 1 && <ArrowRight className="workflow-arrow" size={17} aria-hidden="true" />}
           </div>;
         })}
       </div>
-      {example && <p className="room-note"><span>SWITCH ROOM</span> c96aba84-1c69-4a1a-9399-510b329076cb <span className="note-divider">·</span> Evidence Agent reported the missing deployment and QA proof; no approval or GitHub action has occurred.</p>}
+      {example && <p className="room-note"><span>RECORDED SWITCH ROOM</span> c96aba84-1c69-4a1a-9399-510b329076cb <span className="note-divider">·</span> The Evidence Agent handed off merged-PR and CI results; the Coordinator requested deployment and QA proof. No approval or GitHub action followed.</p>}
     </section>
   );
 }
@@ -160,6 +160,7 @@ export default function App() {
   const [mode, setMode] = useState<ViewMode>('example');
   const [investigation, setInvestigation] = useState<Investigation>(() => makeExampleInvestigation());
   const [selected, setSelected] = useState<EvidenceStep | null>(null);
+  const [showGraph, setShowGraph] = useState(false);
   const [repository, setRepository] = useState('');
   const [pullRequest, setPullRequest] = useState('');
   const [loading, setLoading] = useState(false);
@@ -169,6 +170,7 @@ export default function App() {
   const verifiedCount = steps.filter((step) => step.state === 'verified').length;
   const sourceCount = steps.filter((step) => step.sourceUrl).length;
   const unresolvedCount = steps.filter((step) => step.id !== 'decision' && step.state === 'missing').length;
+  const checklist = steps.filter((step) => ['pr', 'checks', 'deploy', 'qa'].includes(step.id));
 
   const runInvestigation = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -213,8 +215,8 @@ export default function App() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-line" />THE PROMISE ISN'T DONE YET</div>
-          <h1>A merged PR doesn’t mean a customer promise is <em>fulfilled.</em></h1>
-          <p>CommitmentProof checks the evidence before anyone says the fix is delivered.</p>
+          <h1>Can we tell the customer their fix is <em>delivered?</em></h1>
+          <p>A merged PR is one clue. CommitmentProof checks the evidence before anyone says the promise is fulfilled.</p>
         </div>
         <div className="hero-side"><div className="hero-side-icon"><FileWarning size={20} /></div><div><span>THE QUESTION</span><strong>Can we tell the customer their promised fix is live?</strong></div></div>
       </section>
@@ -234,24 +236,42 @@ export default function App() {
       </section>
       {error && <div className="error-banner" role="alert"><ShieldAlert size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error"><X size={15} /></button></div>}
 
-      <section className={`decision-banner state-${decision.state}`} aria-live="polite">
-        <div className="decision-symbol">{decision.state === 'failed' ? <X size={22} /> : decision.state === 'review-ready' ? <ShieldCheck size={22} /> : <CircleHelp size={22} />}</div>
-        <div className="decision-main"><div className="decision-label">POLICY DECISION <span>·</span> {decision.label}</div><strong>{decision.message}</strong></div>
-        <div className="evidence-tally"><div><b>{verifiedCount}</b><span>verified</span></div><div className="tally-divider" /><div><b>{unresolvedCount}</b><span>unresolved</span></div><div className="tally-divider" /><div><b>{sourceCount}</b><span>source links</span></div></div>
-      </section>
-      {investigation.evidence.collection_errors && investigation.evidence.collection_errors.length > 0 && <div className="collector-notes" role="status"><FileWarning size={15} /><div><strong>Collector notes</strong>{investigation.evidence.collection_errors.map((note) => <span key={note}>{note}</span>)}</div></div>}
-
-      <section className="graph-section" aria-labelledby="graph-title">
-        <div className="section-heading graph-heading"><div><div className="section-kicker">THE REASONING, MADE VISIBLE</div><h2 id="graph-title">Commitment evidence graph</h2></div><div className="graph-key"><span><i className="key-dot verified" />Verified</span><span><i className="key-dot failed" />Failed</span><span><i className="key-dot missing" />Missing</span></div></div>
-        <div className="graph-layout">
-          <ReactFlowProvider><EvidenceGraph steps={steps} onSelect={setSelected} /></ReactFlowProvider>
-          {selected ? <DetailPanel step={selected} onClose={() => setSelected(null)} /> : <aside className="inspect-prompt"><span className="prompt-ring"><ArrowDownRight size={19} /></span><strong>Follow the proof</strong><p>Select a step to inspect its source, status and reason.</p><span className="prompt-meta">{investigation.repository} · PR #{investigation.pull_request_number}</span></aside>}
+      <section className="dashboard-evidence" aria-labelledby="checklist-title">
+        <div className="section-heading checklist-heading"><div><div className="section-kicker">THE EVIDENCE</div><h2 id="checklist-title">Four checks. One honest answer.</h2></div><div className="evidence-tally"><div><b>{verifiedCount}</b><span>verified</span></div><div className="tally-divider" /><div><b>{unresolvedCount}</b><span>unresolved</span></div><div className="tally-divider" /><div><b>{sourceCount}</b><span>source links</span></div></div></div>
+        <div className="checklist-grid">
+          {checklist.map((step, index) => {
+            const Icon = icons[step.id as keyof typeof icons] ?? FileWarning;
+            const StateIcon = statusIcon(step.state);
+            return <article className={`check-card state-${step.state}`} key={step.id}>
+              <div className="check-card-top"><div className="check-icon"><Icon size={18} /></div><span className="check-step">0{index + 1} / 04</span></div>
+              <div className="check-card-title">{step.title}</div>
+              <div className="check-card-status"><StateIcon size={13} />{step.label}</div>
+              <p>{step.detail || step.explanation}</p>
+              {step.sourceUrl ? <a href={step.sourceUrl} target="_blank" rel="noreferrer">Open source evidence <ExternalLink size={13} /></a> : <span className="check-no-source"><CircleHelp size={13} />No source record</span>}
+            </article>;
+          })}
         </div>
       </section>
 
-      <section className="next-step"><div className="next-step-icon"><CircleHelp size={19} /></div><div><span>NEXT ACTION</span><strong>{investigation.assessment.permitted_action === 'REQUEST_EVIDENCE' ? 'Request deployment proof and QA confirmation.' : investigation.assessment.permitted_action === 'PREPARE_FOLLOWUP_DRAFT' ? 'Prepare a follow-up and keep the customer promise open.' : 'Ask a human to review the complete source-linked evidence.'}</strong><p>Unknown evidence stays unknown. This screen never creates an issue or sends a customer message.</p></div><div className="next-step-lock"><ShieldAlert size={15} /> Human decision required</div></section>
+      <section className={`verdict-card state-${decision.state}`} aria-live="polite">
+        <div className="verdict-icon">{decision.state === 'failed' ? <X size={24} /> : decision.state === 'review-ready' ? <ShieldCheck size={24} /> : <CircleHelp size={24} />}</div>
+        <div className="verdict-copy"><div className="verdict-kicker">POLICY VERDICT</div><h2>{decision.label}</h2><p>{decision.message}</p><div className="verdict-reasons">{investigation.assessment.reasons.map((reason) => <span key={reason}><i />{reason}</span>)}</div></div>
+        <div className="verdict-guardrail"><ShieldAlert size={17} /><span>Completion claim<br /><strong>NOT PERMITTED</strong></span></div>
+      </section>
+
+      {investigation.evidence.collection_errors && investigation.evidence.collection_errors.length > 0 && <div className="collector-notes" role="status"><FileWarning size={15} /><div><strong>Collector notes</strong>{investigation.evidence.collection_errors.map((note) => <span key={note}>{note}</span>)}</div></div>}
 
       <WorkflowStrip mode={mode} />
+
+      <section className="next-step"><div className="next-step-icon"><CircleHelp size={19} /></div><div><span>NEXT ACTION</span><strong>{investigation.assessment.permitted_action === 'REQUEST_EVIDENCE' ? 'Request deployment proof and QA confirmation.' : investigation.assessment.permitted_action === 'PREPARE_FOLLOWUP_DRAFT' ? 'Prepare a follow-up and keep the customer promise open.' : 'Ask a human to review the complete source-linked evidence.'}</strong><p>Unknown evidence stays unknown. This screen never creates an issue or sends a customer message.</p></div><div className="next-step-lock"><ShieldAlert size={15} /> Human decision required</div></section>
+
+      <section className="map-disclosure" aria-labelledby="graph-title">
+        <button className="map-toggle" onClick={() => setShowGraph((visible) => !visible)} aria-expanded={showGraph} aria-controls="evidence-map"><span><GitBranch size={16} />Explore the evidence relationship map</span><span>{showGraph ? 'Hide map' : 'Optional detail'} <ArrowDownRight size={15} /></span></button>
+        {showGraph && <div id="evidence-map" className="graph-section">
+          <div className="section-heading graph-heading"><div><div className="section-kicker">OPTIONAL EXPLORATION</div><h2 id="graph-title">How each piece connects</h2></div><div className="graph-key"><span><i className="key-dot verified" />Verified</span><span><i className="key-dot failed" />Failed</span><span><i className="key-dot missing" />Missing</span></div></div>
+          <div className="graph-layout"><ReactFlowProvider><EvidenceGraph steps={steps} onSelect={setSelected} /></ReactFlowProvider>{selected ? <DetailPanel step={selected} onClose={() => setSelected(null)} /> : <aside className="inspect-prompt"><span className="prompt-ring"><ArrowDownRight size={19} /></span><strong>Follow the proof</strong><p>Select a step to inspect its source, status and reason.</p><span className="prompt-meta">{investigation.repository} · PR #{investigation.pull_request_number}</span></aside>}</div>
+        </div>}
+      </section>
 
       <footer className="footer"><span>COMMITMENTPROOF <i>·</i> PROVE IT BEFORE YOU CLOSE IT</span><span>{mode === 'example' ? 'Example mode · no live GitHub request made' : `Read-only GitHub evidence · ${investigation.collected_at}`}</span></footer>
     </main>

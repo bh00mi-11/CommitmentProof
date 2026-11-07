@@ -23,10 +23,11 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe('investigation walkthrough', () => {
   it('opens with an explicitly recorded example and unresolved proof', () => {
     render(<App />);
-    expect(screen.getByText(/A merged PR doesn’t mean a customer promise is/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Can we tell the customer their fix is delivered/i })).toBeInTheDocument();
     expect(screen.getByText(/Recorded evidence · collected previously · not refreshed/)).toBeInTheDocument();
-    expect(screen.getByText(/POLICY DECISION.*NEEDS EVIDENCE/)).toBeInTheDocument();
-    expect(screen.getByText(/no approval or GitHub action has occurred/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'NEEDS EVIDENCE' })).toBeInTheDocument();
+    expect(screen.getByText(/No approval or GitHub action followed/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Explore the evidence relationship map/i })).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('submits live investigations to the local adapter and renders policy output', async () => {
@@ -45,7 +46,7 @@ describe('investigation walkthrough', () => {
     fireEvent.change(screen.getByPlaceholderText('owner/repository'), { target: { value: 'acme/app' } });
     fireEvent.change(screen.getByPlaceholderText('123'), { target: { value: '7' } });
     fireEvent.click(screen.getByRole('button', { name: /Check evidence/i }));
-    await waitFor(() => expect(screen.getByText(/POLICY DECISION.*BLOCKED/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'BLOCKED' })).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith('/api/investigate', expect.objectContaining({ method: 'POST' }));
     expect(screen.getByText(/Read-only GitHub evidence/)).toBeInTheDocument();
   });
