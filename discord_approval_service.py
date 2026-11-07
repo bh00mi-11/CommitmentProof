@@ -140,7 +140,8 @@ class ApprovalService:
     @classmethod
     def from_environment(cls) -> "ApprovalService":
         required = (
-            "DISCORD_PUBLIC_KEY", "DISCORD_APPLICATION_ID", "COMMITMENTPROOF_APPROVER_DISCORD_ID",
+            "COMMITMENTPROOF_DISCORD_PUBLIC_KEY", "COMMITMENTPROOF_DISCORD_APPLICATION_ID",
+            "COMMITMENTPROOF_APPROVER_DISCORD_ID",
             "COMMITMENTPROOF_APPROVAL_PUBLIC_KEY", "COMMITMENTPROOF_APPROVAL_SIGNING_PRIVATE_KEY",
             "GITHUB_TOKEN", "APPROVAL_DRAFTS_PATH", "APPROVAL_DB_PATH",
         )
@@ -148,7 +149,7 @@ class ApprovalService:
         if any(not value for value in values.values()):
             raise ApprovalServiceError("Required service configuration is missing")
         try:
-            discord_key_bytes = bytes.fromhex(values["DISCORD_PUBLIC_KEY"] or "")
+            discord_key_bytes = bytes.fromhex(values["COMMITMENTPROOF_DISCORD_PUBLIC_KEY"] or "")
             discord_public_key = Ed25519PublicKey.from_public_bytes(discord_key_bytes)
             signing_raw = base64.b64decode(values["COMMITMENTPROOF_APPROVAL_SIGNING_PRIVATE_KEY"] or "", validate=True)
             signing_key = Ed25519PrivateKey.from_private_bytes(signing_raw)
@@ -163,7 +164,7 @@ class ApprovalService:
         return cls(
             drafts=drafts, database_path=values["APPROVAL_DB_PATH"] or "",
             discord_public_key=discord_public_key,
-            discord_application_id=values["DISCORD_APPLICATION_ID"] or "",
+            discord_application_id=values["COMMITMENTPROOF_DISCORD_APPLICATION_ID"] or "",
             allowed_discord_user_id=values["COMMITMENTPROOF_APPROVER_DISCORD_ID"] or "",
             approval_signing_key=signing_key,
         )

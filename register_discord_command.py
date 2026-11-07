@@ -42,7 +42,7 @@ def register_command(
     opener: Callable = urllib.request.urlopen,
 ) -> dict:
     if not bot_token:
-        raise ValueError("DISCORD_BOT_TOKEN is required with --apply")
+        raise ValueError("COMMITMENTPROOF_DISCORD_BOT_TOKEN is required with --apply")
     url, body = request_plan(application_id, guild_id)
     request = urllib.request.Request(
         url,
@@ -66,22 +66,22 @@ def register_command(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--application-id", default=os.environ.get("DISCORD_APPLICATION_ID"))
-    parser.add_argument("--guild-id", default=os.environ.get("DISCORD_GUILD_ID"))
+    parser.add_argument("--application-id", default=os.environ.get("COMMITMENTPROOF_DISCORD_APPLICATION_ID"))
+    parser.add_argument("--guild-id", default=os.environ.get("COMMITMENTPROOF_DISCORD_GUILD_ID"))
     parser.add_argument("--apply", action="store_true", help="perform the Discord API write")
     args = parser.parse_args(argv)
     if not args.application_id or not args.guild_id:
-        parser.error("set DISCORD_APPLICATION_ID and DISCORD_GUILD_ID or pass the corresponding flags")
+        parser.error("set COMMITMENTPROOF_DISCORD_APPLICATION_ID and COMMITMENTPROOF_DISCORD_GUILD_ID or pass the corresponding flags")
     try:
         url, body = request_plan(args.application_id, args.guild_id)
         if not args.apply:
             print("DRY RUN — no Discord request sent")
             print(f"POST {url}")
             print(body.decode("utf-8"))
-            print("To register explicitly, set DISCORD_BOT_TOKEN securely and rerun with --apply.")
+            print("To register explicitly, set COMMITMENTPROOF_DISCORD_BOT_TOKEN securely and rerun with --apply.")
             return 0
         result = register_command(args.application_id, args.guild_id,
-                                  os.environ.get("DISCORD_BOT_TOKEN", ""))
+                                  os.environ.get("COMMITMENTPROOF_DISCORD_BOT_TOKEN", ""))
     except (ValueError, OSError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
         return 1

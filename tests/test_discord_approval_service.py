@@ -1,15 +1,18 @@
 import concurrent.futures
 import base64
 import json
+import os
 import tempfile
 import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from discord_approval_service import ApprovalService, Draft
+from discord_approval_service import ApprovalService, ApprovalServiceError, Draft
 from github_issue_approval import IssueResult, _approval_claims
 
 
@@ -52,6 +55,51 @@ class DiscordApprovalServiceTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_from_environment_uses_dedicated_approval_app_variables(self):
+        signing_private = self.approval_signer.private_bytes(
+            serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
+        approval_public = self.approval_signer.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+        drafts_path = Path(self.temp.name) / "drafts.json"
+        drafts_path.write_text(json.dumps({"drafts": [{
+            "draft_id": DRAFT.draft_id, "target_repository": DRAFT.target_repository,
+            "title": DRAFT.title, "body": DRAFT.body,
+        }]}), encoding="utf-8")
+        env = {
+            "COMMITMENTPROOF_DISCORD_PUBLIC_KEY": self.discord_signer.public_key().public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex(),
+            "COMMITMENTPROOF_DISCORD_APPLICATION_ID": APPLICATION_ID,
+            "COMMITMENTPROOF_APPROVER_DISCORD_ID": DISCORD_USER,
+            "COMMITMENTPROOF_APPROVAL_PUBLIC_KEY": base64.b64encode(approval_public).decode("ascii"),
+            "COMMITMENTPROOF_APPROVAL_SIGNING_PRIVATE_KEY": base64.b64encode(signing_private).decode("ascii"),
+            "GITHUB_TOKEN": "mock-test-token",
+            "APPROVAL_DRAFTS_PATH": str(drafts_path),
+            "APPROVAL_DB_PATH": self.db,
+            # Simulate unrelated generic variables belonging to another bot.
+            "DISCORD_PUBLIC_KEY": "not-the-approval-public-key",
+            "DISCORD_APPLICATION_ID": "99999999999999999",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            service = ApprovalService.from_environment()
+        self.assertEqual(service.discord_application_id, APPLICATION_ID)
+        self.assertEqual(service.allowed_discord_user_id, DISCORD_USER)
+        self.assertEqual(set(service.drafts), {DRAFT.draft_id})
+
+    def test_from_environment_rejects_only_generic_discord_variables(self):
+        with patch.dict(os.environ, {
+            "DISCORD_PUBLIC_KEY": self.discord_signer.public_key().public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex(),
+            "DISCORD_APPLICATION_ID": APPLICATION_ID,
+            "COMMITMENTPROOF_APPROVER_DISCORD_ID": DISCORD_USER,
+            "COMMITMENTPROOF_APPROVAL_PUBLIC_KEY": "placeholder",
+            "COMMITMENTPROOF_APPROVAL_SIGNING_PRIVATE_KEY": "placeholder",
+            "GITHUB_TOKEN": "placeholder",
+            "APPROVAL_DRAFTS_PATH": "placeholder",
+            "APPROVAL_DB_PATH": "placeholder",
+        }, clear=True):
+            with self.assertRaisesRegex(ApprovalServiceError, "configuration is missing"):
+                ApprovalService.from_environment()
 
     def make_payload(self, *, interaction_id="33333333333333333", user_id=DISCORD_USER,
                      draft_id="draft-42", application_id=APPLICATION_ID):

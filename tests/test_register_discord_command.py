@@ -1,8 +1,9 @@
 import contextlib
 import io
 import json
+import os
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from register_discord_command import main, register_command, request_plan
 
@@ -37,6 +38,34 @@ class RegisterDiscordCommandTests(unittest.TestCase):
         self.assertIn(f"/applications/{APPLICATION_ID}/guilds/{GUILD_ID}/commands", output)
         self.assertIn('"name":"review-followup"', output)
         opener.assert_not_called()
+
+    def test_cli_reads_dedicated_approval_app_variables(self):
+        stdout = io.StringIO()
+        env = {
+            "COMMITMENTPROOF_DISCORD_APPLICATION_ID": APPLICATION_ID,
+            "COMMITMENTPROOF_DISCORD_GUILD_ID": GUILD_ID,
+            # Generic variables for an unrelated bot must not be consulted.
+            "DISCORD_APPLICATION_ID": "99999999999999999",
+            "DISCORD_GUILD_ID": "88888888888888888",
+        }
+        with patch.dict(os.environ, env, clear=True), contextlib.redirect_stdout(stdout):
+            result = main([])
+        self.assertEqual(result, 0)
+        self.assertIn(f"/applications/{APPLICATION_ID}/guilds/{GUILD_ID}/commands", stdout.getvalue())
+        self.assertNotIn("99999999999999999", stdout.getvalue())
+
+    def test_apply_reads_only_dedicated_approval_bot_token(self):
+        env = {
+            "COMMITMENTPROOF_DISCORD_APPLICATION_ID": APPLICATION_ID,
+            "COMMITMENTPROOF_DISCORD_GUILD_ID": GUILD_ID,
+            "COMMITMENTPROOF_DISCORD_BOT_TOKEN": "approval-app-token",
+            "DISCORD_BOT_TOKEN": "switch-bot-token",
+        }
+        with patch.dict(os.environ, env, clear=True), patch(
+            "register_discord_command.register_command", return_value={"name": "review-followup"}
+        ) as register:
+            self.assertEqual(main(["--apply"]), 0)
+        register.assert_called_once_with(APPLICATION_ID, GUILD_ID, "approval-app-token")
 
     def test_apply_posts_only_manifest_command_with_bot_auth(self):
         url, expected_body = request_plan(APPLICATION_ID, GUILD_ID)
