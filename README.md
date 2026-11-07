@@ -1,199 +1,172 @@
 # CommitmentProof
+### Prove it before you close it.
 
-**Prove it before you close it.**
+**Flip the Switch Hackathon · Track 1: Best Business Workflow**
 
-**Flip the Switch Hackathon — Track 1: Best Business Workflow**
+[**Try the live dashboard**](https://commitment-proof.vercel.app/) · [**See the completed GitHub follow-up**](https://github.com/bh00mi-11/CommitmentProof/issues/2) · [**Source code**](https://github.com/bh00mi-11/CommitmentProof)
 
-[Live dashboard](https://commitment-proof.vercel.app/) · [Recorded human-approved outcome](https://github.com/bh00mi-11/CommitmentProof/issues/2) · [Switch hackathon](https://www.wemakedevs.org/hackathons/switch)
+> **The question:** “Our fix was merged. Can we tell the customer it's delivered?”
+>
+> **Our answer:** Not until the evidence proves it.
 
-> A merged pull request is not proof that a customer promise has been fulfilled.
+## The story
 
-## The problem
+Imagine a support manager about to tell a customer that their promised fix is complete. The pull request is merged. The CI pipeline is green. Everything looks done.
 
-A support manager asks, **"Can we tell the customer their promised fix is delivered?"** A merged PR and green CI are encouraging, but neither proves the fix reached the customer's environment or passed QA. Premature completion claims erode trust.
+**But was it actually deployed? Did QA confirm the customer's problem is resolved?**
 
-## Our solution
+This is where **CommitmentProof** steps in. Inside a real **Switch-connected Discord room**, two AI agents work together to investigate the promise, distinguish proof from assumptions, and recommend the next responsible action. The human stays in control.
 
-**CommitmentProof** coordinates two distinct AI agents **inside a real Switch-connected Discord room**, with a human responsible for the final action:
+In our demonstration, the Evidence Agent examined [a real merged VS Code pull request](https://github.com/microsoft/vscode/pull/331010) and its [passing checks](https://github.com/microsoft/vscode/commit/026fe5316ffc0998aab553b3ca3d4f36d8e8792f/checks). The Coordinator Agent saw that deployment and QA evidence had not been established. Rather than declaring “done,” it drafted a precise follow-up. A human approved that draft, created the follow-up issue in our repository, and the Coordinator verified the result.
 
-1. **Human request** — A manager asks whether a specific promise is fulfilled.
-2. **Evidence Agent** — Reads an actual GitHub PR and its check runs, attaches source links, and explicitly identifies missing evidence.
-3. **Coordinator Agent** — Receives the Evidence Agent's findings in the same Switch room, applies a deterministic completion policy, and drafts a concrete follow-up.
-4. **Human decision** — Reviews and approves or rejects the exact follow-up.
-5. **Verified GitHub outcome** — In our demonstrated session, the human **manually** created the approved issue; the Coordinator independently checked its content and source links.
+**[View verified GitHub issue #2](https://github.com/bh00mi-11/CommitmentProof/issues/2)**
 
-**The key differentiator:** Completion claims are evidence-gated. Merged code is not automatically treated as a delivered customer outcome.
+The outcome isn't a confident but unsupported completion claim. It's an accountable next step, backed by evidence.
 
-## How Switch is used
-
-This is not a two-agent simulation on a standalone dashboard. Two real Codex agents communicated through **Switch Console and a shared Discord room** named `#commitment-proof`:
+## One workflow. Two agents. Human accountability.
 
 ```mermaid
 flowchart LR
-    H["Human manager\nasks about promise"] --> S["Switch room\nDiscord collaboration"]
-    S --> E["Evidence Agent\nGitHub PR + CI"]
-    E -->|Source-linked findings| C["Coordinator Agent\nPolicy + next step"]
-    C -->|Exact follow-up proposal| H
-    H -->|Explicit approval| G["Manual GitHub issue creation"]
-    G -->|Read-only verification| C
-    C --> S
+    A["👤 Human asks\nIs the fix delivered?"] --> B["🔎 Evidence Agent\nChecks real GitHub evidence"]
+    B -->|Source-linked findings in Switch| C["🧭 Coordinator Agent\nDecides next step"]
+    C --> D["🙋 Human reviews\nand approves"]
+    D --> E["✅ GitHub follow-up\nManually created"]
+    E --> F["🔗 Coordinator verifies\nissue and evidence"]
 ```
 
-| Participant | Actual responsibility |
+### Why Switch matters
+
+This isn't two chatbots working separately. **Switch provides the shared collaboration room** where the human request, Evidence Agent findings, Coordinator handoff, and human decision happen in one conversation.
+
+| Role | What it contributes |
 | --- | --- |
-| Human | Starts investigation, reviews proposal, approves the external action |
-| Evidence Agent | Collects read-only GitHub evidence; does not invent deployment or QA proof |
-| Coordinator Agent | Interprets evidence, prepares follow-up, confirms the GitHub result |
-| Switch + Discord | Shared conversation, real agent-to-agent handoff, and human checkpoint |
-| Dashboard | Visualizes source-linked investigations and a **recorded**, verified Switch session |
+| **Evidence Agent** | Reads real PR/check data and returns verifiable source links |
+| **Coordinator Agent** | Applies a deterministic evidence policy, explains the decision, and prepares an actionable follow-up |
+| **Human** | Reviews the proposed action and decides whether to execute it |
+| **Switch** | Connects the participants in a shared Discord workflow with visible handoffs |
 
-The dashboard is **not connected to a live Switch event feed**. It correctly labels recorded events as recorded. Its separate **Live investigation** mode does use a real read-only GitHub API.
+**Why this is a Track 1 business workflow:** A real team gets a real task done: from a business question through two-agent investigation and collaboration to a human-approved, independently verified GitHub follow-up.
 
-## Verified end-to-end demonstration
+## See the working example
 
-We investigated **[microsoft/vscode PR #331010](https://github.com/microsoft/vscode/pull/331010)**:
+**[Open CommitmentProof dashboard](https://commitment-proof.vercel.app/)**
 
-| Evidence | Finding |
+Choose **Recorded Switch session** to see the actual investigation story, agent handoff, human approval, and completed issue. This recorded view represents a real Switch conversation, not a live event stream.
+
+Choose **Live investigation** to enter a GitHub repository and PR number and run a **real read-only GitHub evidence check**.
+
+For a quick test, use:
+
+| Input | Value |
 | --- | --- |
-| PR merged | Verified |
-| CI checks | 27/27 returned completed checks successful in the demonstrated investigation ([source](https://github.com/microsoft/vscode/commit/026fe5316ffc0998aab553b3ca3d4f36d8e8792f/checks)) |
-| Deployment to customer environment | **Unknown** |
-| QA reproduction / confirmation | **Unknown** |
-| Delivery claim | **NEEDS_EVIDENCE** — do **not** tell customer the fix is delivered |
+| Repository | `microsoft/vscode` |
+| Pull request | `331010` |
 
-In Switch, the Evidence Agent handed source-linked findings to the Coordinator, who drafted a request for deployment and QA proof. The human approved the exact proposal, **manually created [CommitmentProof issue #2](https://github.com/bh00mi-11/CommitmentProof/issues/2)**, and the Coordinator verified that the issue existed, was open, and matched the approved title, body, and evidence links.
+The decision remains **NEEDS EVIDENCE** because the PR merge and checks alone do not verify deployment and QA. That is the feature, not a failure.
 
-**Important:** This is an illustrative investigation of a public upstream VS Code PR. We do not claim to operate VS Code or to know the status of a real VS Code customer's environment. The issue is a demonstration follow-up in **our own** repository.
+### Demonstrated result
 
-**Also important:** Human approval and issue creation were completed in the shared workflow, but the **automated signed Discord approval-to-GitHub writer is not deployed**. No automatic issue creation or customer communication is claimed.
+- **Real GitHub evidence:** PR merged and 27 returned CI checks successful in the recorded investigation.
+- **Real Switch collaboration:** Evidence Agent handed source-linked findings to Coordinator Agent in Discord.
+- **Real human decision:** The exact follow-up proposal was approved in the room.
+- **Real GitHub outcome:** [Issue #2](https://github.com/bh00mi-11/CommitmentProof/issues/2) was **manually created** in our repository, and the Coordinator verified its title, body, and source links.
 
-## Architecture
+*This is an illustrative use of a public VS Code PR. We do not claim to manage VS Code's customer deployments.*
+
+## How it works
 
 ```mermaid
 flowchart TD
-    subgraph Switch["Switch collaboration (working in Discord)"]
-      U["Human"] --> EA["Evidence Agent · Codex"]
-      EA --> CA["Coordinator Agent · Codex"]
-      CA --> U
+    subgraph Room["Switch + Discord: collaborative workflow"]
+      Human["Human"] --> Evidence["Codex Evidence Agent"]
+      Evidence --> Coordinator["Codex Coordinator Agent"]
+      Coordinator --> Human
     end
-    EA -.->|Real GitHub PR/check evidence| GH["GitHub REST API"]
-    CA -.->|Uses deterministic policy| P["commitment_proof.py"]
-    U -->|Manual approved write, demo| ISSUE["GitHub issue #2"]
-    subgraph Web["Public evidence dashboard (Vercel)"]
-      UI["React / Vite / TypeScript"]
-      API["Python /api/investigate"]
-      UI --> API
-      API --> GH
-      API --> P
-    end
-    UI -.->|Labeled recorded session, not a live feed| Switch
-    subgraph Future["Implemented locally, not deployed"]
-      DIS["Discord signed interaction receiver"]
-      SIG["Signed approval + SQLite idempotency"]
-      DIS --> SIG
+    Evidence --> Github["GitHub PR + CI API"]
+    Coordinator --> Policy["Deterministic completion policy"]
+    Human --> Issue["Human-created GitHub issue"]
+    Coordinator -->|Verifies actual result| Issue
+
+    subgraph Site["Public Vercel dashboard"]
+      Frontend["React + Vite + TypeScript"] --> API["Python read-only API"]
+      API --> Github
+      API --> Policy
     end
 ```
 
-### Main components
+**Technology:** Switch Console, Discord, Codex agents, Python, GitHub REST API, React, Vite, TypeScript, Vercel. The deterministic policy treats missing or contradictory proof conservatively rather than relying on an LLM's confidence alone.
 
-- `commitment_proof.py`: deterministic, fail-closed completion policy.
-- `github_evidence.py`: read-only GitHub PR and check-run collector; unknown deployment/QA remains unknown.
-- `frontend/`: React + Vite + TypeScript dashboard, evidence checklist, prominent verdict, recorded Switch handoff, and verified human outcome.
-- `frontend/backend.py`: local JSON investigation API adapter.
-- `api/investigate.py`, `api/health.py`: Vercel-hosted Python read-only API endpoints.
-- `discord_approval_service.py`, `github_issue_approval.py`: locally tested, **not deployed** signed approval and privileged issue writer.
-- `register_discord_command.py`, `discord_commands.json`: dry-run-by-default Discord command registration preparation.
-- `tests/`: unit/integration tests covering evidence, approval safeguards, and API behavior.
-- `switch/commitment-proof.template.yaml`: illustrative agent-room template; not a validated one-click Switch import.
+## Run the project
 
-## Try the public demo
-
-**Dashboard:** https://commitment-proof.vercel.app/
-
-**Recorded Switch session:** Open the `Recorded Switch session` tab. Read the Evidence Agent → Coordinator Agent handoff, the `NEEDS EVIDENCE` decision, the explicit human approval, and the [verified follow-up issue](https://github.com/bh00mi-11/CommitmentProof/issues/2). This is recorded real activity, **not** a live event stream.
-
-**Live GitHub investigation:** Open `Live investigation`, enter repository `microsoft/vscode` and PR `331010`, and select **Check evidence**. The site invokes its server-side read-only collector and updates the checklist and verdict from GitHub data. Actual GitHub data can change; missing deployment/QA evidence must not be silently invented.
-
-**Public API health:** `GET https://commitment-proof.vercel.app/api/health`
-
-## Run locally
-
-Requires **Python 3.10+**, **Node.js/npm**, and Git. On Windows PowerShell:
+Requires Python 3.10+, Node.js/npm and Git.
 
 ```powershell
 git clone https://github.com/bh00mi-11/CommitmentProof.git
-Set-Location CommitmentProof
+cd CommitmentProof
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 ```
 
-Start the local read-only Python API in one PowerShell terminal:
+**Terminal 1 — local read-only API:**
 
 ```powershell
 python frontend/backend.py
 ```
 
-Start the UI in a **second** PowerShell terminal, from the same clone:
+**Terminal 2 — dashboard:**
 
 ```powershell
-Set-Location frontend
+cd frontend
 npm ci
 npm run dev
 ```
 
-Open the localhost URL printed by Vite. The Vite development proxy forwards `/api` to the local Python adapter on port `8766`. For production build, run `npm run build` from `frontend/`.
+Open the localhost URL displayed by Vite. The development proxy forwards `/api` to the local Python API on port 8766.
 
-For a direct read-only PR check without the UI:
+**Command-line evidence check:**
 
 ```powershell
 python github_evidence.py microsoft/vscode 331010
 ```
 
-Public GitHub repositories work without a token subject to GitHub rate limits. If needed, set `GITHUB_TOKEN` **server-side only**. Never put it in browser code or a `VITE_*` variable.
+For public GitHub repositories, unauthenticated reads are subject to GitHub rate limits. If needed, set `GITHUB_TOKEN` only in the **server process**, never in frontend/browser environment variables.
 
-## Reproduce the Switch collaboration
+### Reproduce the Switch collaboration
 
-1. Install [Switch Console](https://www.wemakedevs.org/hackathons/switch/resources) and connect a Discord server.
-2. Create one room such as `#commitment-proof`.
-3. Add two separate Codex agents, **Evidence Agent** and **Coordinator Agent**, with access to this cloned repository and room; permit agent-to-agent communication.
-4. Ask the Evidence Agent in the room to investigate a specified PR using `github_evidence.py` and hand its source-linked findings to the Coordinator.
-5. Have the Coordinator apply `commitment_proof.assess()`, identify missing proof, and draft an exact follow-up.
-6. Human explicitly reviews the draft; for the demonstrated approach, the human manually creates a follow-up in a repository they control. The Coordinator verifies the actual GitHub issue. **Do not create test issues in an unrelated upstream repository.**
+1. Install [Switch Console](https://www.wemakedevs.org/hackathons/switch/resources), connect Discord, and create a shared room.
+2. Add two Codex agents: an **Evidence Agent** with read-only evidence-investigation instructions, and a **Coordinator Agent** that applies policy and drafts follow-ups.
+3. Ask the Evidence Agent in the shared room to investigate a PR using `github_evidence.py` and pass findings directly to the Coordinator.
+4. Have the Coordinator apply `commitment_proof.assess()` and propose an exact, source-backed follow-up.
+5. Human reviews and explicitly approves the action. For the demonstrated workflow, human manually creates an issue in a repository they control; the Coordinator verifies its URL and contents.
 
-The Switch room and agent configuration require an actual Switch installation; the included YAML is a proposal rather than an established import format.
+The `switch/commitment-proof.template.yaml` is an illustrative configuration, not a verified one-click Switch import.
 
-## Deploy the dashboard on Vercel
+## Project structure
 
-- Connect the GitHub repository, using production branch `main`.
-- Set **Root Directory to the repository root** (`.` or `./`).
-- The committed root `vercel.json` builds `frontend/`, publishes `frontend/dist`, and exposes root Python functions from `api/`.
-- To access private repositories or reduce rate-limit issues, configure `GITHUB_TOKEN` as a **server-side** Vercel environment variable.
-- Verify `/api/health`, then run an actual investigation on the public site.
-- The Vercel deployment does **not** host Switch agents or the signed Discord approval service.
+| Path | Purpose |
+| --- | --- |
+| `commitment_proof.py` | Evidence-gated completion policy |
+| `github_evidence.py` | Real read-only GitHub PR and check collection |
+| `frontend/` | Judge-friendly dashboard, recorded session and live investigations |
+| `api/`, `frontend/backend.py` | Vercel and local investigation API |
+| `tests/` | Evidence, API and approval test coverage |
+| `github_issue_approval.py`, `discord_approval_service.py` | Signed approval and issue-action implementation for future secure deployment |
+| `docs/windows-discord-smoke-test.md` | Detailed approval-service testing and operator setup |
 
-## Approval implementation and limitations
+## Deploy on Vercel
 
-The repository includes a security-focused future automated route: Discord signature validation, immutable draft review, trusted Ed25519-signed approval proof, allowlisted Discord approver, SQLite execution state, and duplicate-detection logic. Local tests use mocked GitHub writes. **The trust-isolated service, public HTTPS interaction endpoint, secrets, and Discord command registration have not been deployed.** The real demonstration used explicit human approval and **manual GitHub issue creation**.
+Import this repository with **Production Branch `main`** and **Root Directory `./`** (repository root). The committed `vercel.json` builds `frontend/` and serves the Python functions in root `api/`.
 
-For detailed no-credential local tests and future trusted-host prerequisites, see [Windows Discord smoke-test guide](docs/windows-discord-smoke-test.md). No private keys or tokens are committed.
+Verify `/api/health` and a live investigation. For private GitHub data, add `GITHUB_TOKEN` as a **server-side** Vercel environment variable.
 
-## Verify
+## Scope and trust
 
-```powershell
-python -m unittest discover -s tests -v
-Set-Location frontend
-npm ci
-npm test -- --run
-npm run build
-```
+The **working demo** includes real Switch/Discord agent collaboration, GitHub evidence retrieval, deterministic assessment, explicit human approval in chat, manual issue creation, and Coordinator verification.
 
-Latest reported project checks before this documentation update: **64/64 Python tests**, **6/6 frontend tests**, and a successful Vite build. These are reported results from the project workflow, not a fresh run by this README update.
+The public site shows **recorded Switch collaboration** and a separate **live GitHub investigation**, not live Switch event streaming. The repository also includes locally tested signed-approval automation, but that privileged Discord-to-GitHub service is **not deployed**. We do not claim automated issue creation, customer communication, or proof of deployment/QA.
 
-## Demo / submission
+For setup and security details of the future signed approval service, see [the Windows guide](docs/windows-discord-smoke-test.md).
 
-- [Live website](https://commitment-proof.vercel.app/)
-- [Source code](https://github.com/bh00mi-11/CommitmentProof)
-- [Verified human-approved GitHub outcome](https://github.com/bh00mi-11/CommitmentProof/issues/2)
-- **Demo video:** add the final public or unlisted YouTube/Loom link before submission.
+---
 
-**CommitmentProof does not independently verify customer deployment or QA, automatically announce delivery, or currently stream Switch events to Vercel. Its core demonstrated value is evidence-backed agent collaboration and human-controlled follow-through.**
+**CommitmentProof — because “merged” and “delivered” are two different things.**
