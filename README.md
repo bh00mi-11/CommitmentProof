@@ -32,6 +32,7 @@ Support asks whether a promised checkout fix is complete. An evidence agent chec
 - `register_discord_command.py` — dry-run-by-default guild command registration helper.
 - `.env.example` — blank configuration template; it contains no usable credentials.
 - `docs/windows-discord-smoke-test.md` — PowerShell no-credential smoke test and manual setup steps.
+- `frontend/` — React + Vite + TypeScript evidence investigation UI and same-origin Python adapter.
 - `tests/test_commitment_proof.py` — seven policy tests.
 - `tests/test_github_evidence.py` — mocked HTTP tests for collection, pagination and failure cases.
 - `tests/test_github_issue_approval.py` — mocked issue API tests, including forged and stale approval rejection.
@@ -101,3 +102,18 @@ The sample must return `BLOCKED` and `can_claim_complete: false`.
 **Safety:** The checker always leaves `can_claim_complete` false. The evidence collector is read-only. The issue module can write to GitHub only when called with a valid signed approval proof and configured credentials; no customer communication is implemented.
 
 Official challenge: https://www.wemakedevs.org/hackathons/switch
+
+## Frontend investigation walkthrough
+
+The frontend defaults to a clearly marked recorded example based on the prior read-only collection of `microsoft/vscode` PR #331010. It is not refreshed and is not presented as a live result. Switch to **Live investigation** to enter an `owner/repository` and PR number. The browser calls only the local Python adapter; `frontend/backend.py` invokes the existing read-only GitHub collector and `commitment_proof.assess()` and returns their source URLs and actual policy output. Deployment and QA remain unknown unless a future trusted collector independently verifies them. The frontend has no approval or issue-creation action, and the Switch handoff is shown as recorded context rather than live-connected data.
+
+From PowerShell, install/build/test the UI:
+
+```powershell
+Set-Location 'C:\Users\manis\CommitmentProof\frontend'
+npm ci
+npm run build
+npm test
+```
+
+For local development, run `python frontend/backend.py` from the repository root in one terminal, then `npm run dev` from `frontend` in a second terminal and open the Vite URL it prints. The development proxy sends `/api` requests to the loopback Python adapter on port 8766. For a public repository, the collector can run without a token subject to GitHub's anonymous API rate limit; if needed, configure `GITHUB_TOKEN` only in the Python backend process environment, never in Vite or browser code. The Python adapter listens on loopback and is not production deployment automation.
