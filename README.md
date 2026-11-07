@@ -105,7 +105,7 @@ Official challenge: https://www.wemakedevs.org/hackathons/switch
 
 ## Frontend investigation walkthrough
 
-The frontend defaults to a clearly marked recorded example based on the prior read-only collection of `microsoft/vscode` PR #331010. It is not refreshed and is not presented as a live result. Switch to **Live investigation** to enter an `owner/repository` and PR number. The browser calls only the local Python adapter; `frontend/backend.py` invokes the existing read-only GitHub collector and `commitment_proof.assess()` and returns their source URLs and actual policy output. Deployment and QA remain unknown unless a future trusted collector independently verifies them. The frontend has no approval or issue-creation action, and the Switch handoff is shown as recorded context rather than live-connected data.
+The dashboard defaults to a clearly labeled **Recorded Switch session** based on the verified room handoff for `microsoft/vscode` PR #331010 (Evidence Agent message `sw_f3edfcaadde246219504809024217a72`, Coordinator follow-up draft `sw_62aebc7a04614e88bcd9d06065b6ec04`). It is recorded room history, not a live Switch event feed. In the current setup, authenticated Switch room tools (`read_context` and `get_room_detail`) are available to agent sessions, but there is no Switch event API credential or public endpoint configured for the Vercel site. Switch event statuses are therefore never inferred from website requests. The **Live investigation** mode accepts an `owner/repository` and PR number and sends a same-origin `POST /api/investigate`; the Python API calls the existing read-only GitHub collector and `commitment_proof.assess()`. It returns actual evidence, source links, and policy output. Deployment and QA remain unknown unless independently verified. The frontend exposes no approval or issue-creation action.
 
 From PowerShell, install/build/test the UI:
 
@@ -116,4 +116,23 @@ npm run build
 npm test
 ```
 
-For local development, run `python frontend/backend.py` from the repository root in one terminal, then `npm run dev` from `frontend` in a second terminal and open the Vite URL it prints. The development proxy sends `/api` requests to the loopback Python adapter on port 8766. For a public repository, the collector can run without a token subject to GitHub's anonymous API rate limit; if needed, configure `GITHUB_TOKEN` only in the Python backend process environment, never in Vite or browser code. The Python adapter listens on loopback and is not production deployment automation.
+For local development, run `python frontend/backend.py` from the repository root in one terminal, then `npm run dev` from `frontend` in a second terminal and open the Vite URL it prints. The development proxy sends `/api` requests to the loopback Python adapter on port 8766. For a public repository, the collector can run without a token subject to GitHub's anonymous API rate limit; if needed, configure `GITHUB_TOKEN` only in the Python backend process environment, never in Vite or browser code.
+
+## Vercel deployment and live investigation API
+
+The root `vercel.json` builds the Vite site from `frontend/` and publishes `frontend/dist`. Root `api/investigate.py` and `api/health.py` are file-based Python functions, so `/api/investigate` and `/api/health` return JSON in production as well as locally. The investigation function calls the same `frontend.backend.api_response()` path used by the local server, then the existing GitHub collector and policy engine. Vercel's Python runtime supports `BaseHTTPRequestHandler` functions in the root `api/` directory; see [Vercel Python functions](https://vercel.com/docs/functions/runtimes/python/api-directory).
+
+The Vercel project must use the **repository root (`.`) as Root Directory** so it sees `vercel.json`, `api/`, `requirements.txt`, `frontend/`, `github_evidence.py`, and `commitment_proof.py`. Production Branch is `main`. The committed build configuration runs `npm ci --prefix frontend`, `npm run build --prefix frontend`, and serves `frontend/dist`. If the project is currently rooted at `frontend/`, change Root Directory to `.` in Vercel Project Settings and redeploy; a root-level API function cannot be included when the project root excludes it.
+
+Set `GITHUB_TOKEN` in Vercel Project Settings → Environment Variables for Production (and Preview if those deployments need private-repository access). This token is read only by the Python collector at runtime and is never sent to the browser. Public repositories can be read without a token until GitHub's unauthenticated rate limit is reached. The serverless API is read-only. The Discord approval service is not part of these API routes and no approval or GitHub write is enabled by the frontend.
+
+To verify after the Vercel deployment is Ready:
+
+```powershell
+$site = 'https://<your-production-domain>'
+Invoke-RestMethod -Uri "$site/api/health"
+$body = @{ repository = 'microsoft/vscode'; pull_request_number = 331010 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$site/api/investigate" -ContentType 'application/json' -Body $body
+```
+
+The health route must return `status: ok`. The investigation should return JSON with `assessment.decision`, `evidence`, and `collected_at`; for this PR the expected result is `NEEDS_EVIDENCE`, merged and checks passed, deployment/QA unknown, with GitHub source links. In the dashboard, select **Live investigation**, enter `microsoft/vscode` and `331010`, and confirm its checklist and verdict update from that API response.

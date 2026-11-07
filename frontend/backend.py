@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = Path(__file__).resolve().parent / "dist"
@@ -46,6 +47,32 @@ def investigate(payload: Any, collector: Callable[..., dict[str, Any]] = collect
     }
 
 
+def api_response(method: str, path: str, body: bytes = b"") -> tuple[int, dict[str, Any]]:
+    """Return the same JSON API response for local and Vercel handlers."""
+    route = urlsplit(path).path
+    if route == "/api/health":
+        if method == "GET":
+            return 200, {"status": "ok"}
+        return 405, {"error": "Method not allowed"}
+    if route != "/api/investigate":
+        return 404, {"error": "API route not found"}
+    if method != "POST":
+        return 405, {"error": "Method not allowed"}
+    if len(body) > MAX_REQUEST_BYTES:
+        return 413, {"error": "Request body is invalid or too large"}
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return 400, {"error": "Request JSON is invalid"}
+    try:
+        return 200, investigate(payload)
+    except ValueError as exc:
+        return 400, {"error": str(exc)}
+    except Exception:
+        # Never return upstream exception text, request headers, or credentials.
+        return 502, {"error": "Evidence investigation failed; check server logs"}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(DIST), **kwargs)
@@ -56,38 +83,28 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/api/health":
-            self._json(200, {"status": "ok"})
-            return
         if self.path.startswith("/api/"):
-            self._json(404, {"error": "API route not found"})
+            status, payload = api_response("GET", self.path)
+            self._json(status, payload)
             return
         super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/api/investigate":
-            self._json(404, {"error": "API route not found"})
-            return
         try:
             length = int(self.headers.get("Content-Length", "-1"))
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_REQUEST_BYTES:
+        if length < 0:
             self._json(413, {"error": "Request body is invalid or too large"})
             return
-        try:
-            payload = json.loads(self.rfile.read(length).decode("utf-8"))
-            self._json(200, investigate(payload))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self._json(400, {"error": "Request JSON is invalid"})
-        except ValueError as exc:
-            self._json(400, {"error": str(exc)})
-        except Exception:
-            self._json(502, {"error": "Evidence investigation failed; check backend status"})
+        body = self.rfile.read(min(length, MAX_REQUEST_BYTES + 1))
+        status, payload = api_response("POST", self.path, body)
+        self._json(status, payload)
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return

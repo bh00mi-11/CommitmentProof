@@ -24,14 +24,16 @@ describe('investigation walkthrough', () => {
   it('opens with an explicitly recorded example and unresolved proof', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: /Can we tell the customer their fix is delivered/i })).toBeInTheDocument();
-    expect(screen.getByText(/Recorded evidence · collected previously · not refreshed/)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Recorded Switch session/ })).toBeInTheDocument();
+    expect(screen.getByText(/Verified Switch transcript · GitHub evidence collected previously/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'NEEDS EVIDENCE' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Powered by Switch: Humans \+ AI Agents Working Together/i })).toBeInTheDocument();
     expect(screen.getByText(/Why two agents\?/i)).toBeInTheDocument();
     expect(screen.getByText(/Requested deployment proof and QA confirmation/)).toBeInTheDocument();
     expect(screen.getByText(/No issue created/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open Discord/ })).toHaveAttribute('href', 'https://discord.com/channels');
-    expect(screen.getAllByText(/not a live event feed/i)).toHaveLength(2);
+    expect(screen.getAllByText(/not a live event feed/i)).toHaveLength(3);
+    expect(screen.getByText(/sw_f3edfcaadde246219504809024217a72/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Explore the evidence relationship map/i })).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -57,5 +59,15 @@ describe('investigation walkthrough', () => {
     expect(screen.getByText(/LIVE SWITCH EVENTS NOT CONNECTED/)).toBeInTheDocument();
     expect(screen.getByText(/does not represent a new agent handoff or approval/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /Open source evidence/ }).map((link) => link.getAttribute('href'))).toContain('https://github.com/acme/app/pull/7');
+  });
+
+  it('reports Vercel HTML routing failures without a JSON parse exception', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('The page could not be found', { status: 404, headers: { 'Content-Type': 'text/plain' } }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: /Live investigation/i }));
+    fireEvent.change(screen.getByPlaceholderText('owner/repository'), { target: { value: 'acme/app' } });
+    fireEvent.change(screen.getByPlaceholderText('123'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: /Check evidence/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/HTTP 404 without a JSON error.*Vercel \/api routing/i);
   });
 });

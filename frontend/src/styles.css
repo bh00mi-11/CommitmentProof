@@ -294,6 +294,7 @@ a { color: inherit; }
 .room-note > a { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 37px; padding: 0 12px; border: 1px solid #527c6b; border-radius: 6px; color: #d9eade; background: #203c35; font-size: 11px; text-decoration: none; }
 .room-note > a:hover { border-color: #8bb9a2; background: #294b40; }
 .room-note > p { grid-column: 1 / -1; margin: 4px 0 0; color: #a8b7b2; font-size: 11px; line-height: 1.45; }
+.room-note > p code { color: #c7dbcF; font: 10px 'DM Mono', monospace; overflow-wrap: anywhere; }
 .room-note-unconnected { display: block; border-color: #665538; }
 .room-note-unconnected > span { color: #e0bc84; }
 

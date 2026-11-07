@@ -156,7 +156,7 @@ function WorkflowStrip({ mode }: { mode: ViewMode }) {
         })}
       </div>
       <div className="agent-rationale"><div className="handoff-beam"><ArrowRight size={19} /></div><p><strong>Why two agents?</strong> The Evidence Agent gathers and cites the proof. The Coordinator independently applies the policy and identifies what is missing. That handoff keeps raw evidence separate from the decision about whether a customer promise is safe to close.</p></div>
-      {example ? <div className="room-note"><div><span>REAL SWITCH-CONNECTED DISCORD ROOM</span><strong>#commitment-proof</strong><small>Channel ID - 1568584704301473985</small></div><a href="https://discord.com/channels" target="_blank" rel="noreferrer">Open Discord <ExternalLink size={14} /></a><p>Find #commitment-proof in the CommitmentProof Discord server. The recorded handoff above is from this room; it is not a live event feed.</p></div> : <div className="room-note room-note-unconnected"><span>SWITCH ROOM NOT CONNECTED TO THIS INVESTIGATION</span><p>This verdict came from the read-only GitHub collector. It does not represent a new agent handoff or approval.</p></div>}
+      {example ? <div className="room-note"><div><span>VERIFIED SWITCH-CONNECTED DISCORD ROOM</span><strong>#commitment-proof</strong><small>Channel ID - 1568584704301473985</small></div><a href="https://discord.com/channels" target="_blank" rel="noreferrer">Open Discord <ExternalLink size={14} /></a><p>Recorded handoff: Evidence Agent message <code>sw_f3edfcaadde246219504809024217a72</code> → Coordinator follow-up draft <code>sw_62aebc7a04614e88bcd9d06065b6ec04</code>. This verified room history is not a live event feed.</p></div> : <div className="room-note room-note-unconnected"><span>SWITCH ROOM NOT CONNECTED TO THIS INVESTIGATION</span><p>This verdict came from the read-only GitHub collector. It does not represent a new agent handoff or approval.</p></div>}
     </section>
   );
 }
@@ -191,8 +191,23 @@ export default function App() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repository: repository.trim(), pull_request_number: parsedNumber }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'The evidence service could not complete the investigation.');
+      const rawResponse = await response.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(rawResponse);
+      } catch {
+        const message = response.ok
+          ? 'The investigation API returned a non-JSON response. Confirm the Vercel /api/investigate function is deployed.'
+          : `The investigation API returned HTTP ${response.status} without a JSON error. Check Vercel /api routing.`;
+        throw new Error(message);
+      }
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('The investigation API returned an unexpected response.');
+      }
+      if (!response.ok) {
+        const apiError = 'error' in payload && typeof payload.error === 'string' ? payload.error : '';
+        throw new Error(apiError || `The evidence service could not complete the investigation (HTTP ${response.status}).`);
+      }
       setInvestigation(payload as Investigation);
       setMode('live');
       setSelected(null);
@@ -228,10 +243,10 @@ export default function App() {
 
       <section className="investigation-bar" aria-label="Investigation controls">
         <div className="mode-switch" role="tablist" aria-label="Investigation mode">
-          <button className={mode === 'example' ? 'active' : ''} onClick={() => switchMode('example')} role="tab" aria-selected={mode === 'example'}><Sparkles size={15} /> Recorded example</button>
+          <button className={mode === 'example' ? 'active' : ''} onClick={() => switchMode('example')} role="tab" aria-selected={mode === 'example'}><Sparkles size={15} /> Recorded Switch session</button>
           <button className={mode === 'live' ? 'active' : ''} onClick={() => switchMode('live')} role="tab" aria-selected={mode === 'live'}><Activity size={15} /> Live investigation</button>
         </div>
-        {mode === 'example' ? <div className="mode-disclaimer"><span className="disclaimer-dot" />Recorded evidence · collected previously · not refreshed</div> : (
+        {mode === 'example' ? <div className="mode-disclaimer"><span className="disclaimer-dot" />Verified Switch transcript · GitHub evidence collected previously · not a live event feed</div> : (
           <form className="investigate-form" onSubmit={runInvestigation}>
             <label><span>REPOSITORY</span><input value={repository} onChange={(event) => setRepository(event.target.value)} placeholder="owner/repository" autoComplete="off" /></label>
             <label className="pr-input"><span>PULL REQUEST</span><input value={pullRequest} onChange={(event) => setPullRequest(event.target.value)} placeholder="123" inputMode="numeric" /></label>
@@ -278,7 +293,7 @@ export default function App() {
         </div>}
       </section>
 
-      <footer className="footer"><span>COMMITMENTPROOF <i>·</i> PROVE IT BEFORE YOU CLOSE IT</span><span>{mode === 'example' ? 'Example mode · no live GitHub request made' : `Read-only GitHub evidence · ${investigation.collected_at}`}</span></footer>
+      <footer className="footer"><span>COMMITMENTPROOF <i>·</i> PROVE IT BEFORE YOU CLOSE IT</span><span>{mode === 'example' ? 'Recorded Switch session · no live GitHub request made' : `Read-only GitHub evidence · ${investigation.collected_at}`}</span></footer>
     </main>
   );
 }
